@@ -2,7 +2,7 @@
 
 Standalone Steam achievement tracking, planning, and sync dashboard.
 
-Achievd is a desktop app for seeing your Steam achievement progress, finding games closest to completion, tracking rare locked achievements, and building a small planner for what to finish next.
+Achievd is a desktop app for seeing your Steam achievement progress, finding games closest to completion, customizing your library, tracking rare locked achievements, and building a small planner for what to finish next.
 
 ---
 
@@ -18,13 +18,15 @@ It does **not** unlock, lock, or modify Steam achievements. It reads your Steam 
 
 - Live Steam profile, owned-games, achievement, and global-rarity sync
 - Dashboard with completion, remaining achievements, perfected games, and recent unlocks
-- Game library with search, filters, sorting, cards, and compact list view
+- Game library with search, filters, sorting, hidden games, and box-art editing
 - Install games from Steam directly from the library when they are not installed
 - Play installed Steam games directly from the library
-- Per-game achievement pages with spoiler hiding and rarity labels
+- Per-game achievement pages with spoiler hiding, rarity labels, and custom banners
+- SteamGridDB browsing for replacement box art and banners when `STEAMGRIDDB_API_KEY` is configured
 - Planner for pinned achievements, notes, manual progress, priority, and archive state
 - Global sync progress visible while using Dashboard, Games, Planner, or Settings
-- Local desktop accounts with encrypted per-user Steam API keys
+- Local desktop accounts with encrypted per-user Steam API keys, login tiles, and optional saved-password login
+- Settings for spoiler mode, default library sort, theme preference, and rarity thresholds
 - PostgreSQL-backed storage for larger scraped datasets
 - JSON export and account deletion from Settings
 
@@ -82,6 +84,12 @@ Steam64ID lookup:
 https://steamid.io/
 ```
 
+Optional SteamGridDB art browsing:
+
+```env
+STEAMGRIDDB_API_KEY=your_steamgriddb_key
+```
+
 ---
 
 ## Build Instructions for Electron
@@ -113,7 +121,7 @@ pnpm desktop:package
 Output:
 
 ```text
-dist/Achievd 0.1.0.exe
+dist/Achievd Setup 0.1.0.exe
 ```
 
 ### Build portable Windows executable
@@ -178,7 +186,6 @@ pnpm build
 - Better per-game sync diagnostics and skipped-game reporting
 - Scheduled background sync and rarity refresh
 - Import SQLite/local data into PostgreSQL
-- More robust image fallback and local asset cache
 - Full text search for games and achievements
 - Scraped community guides and difficulty metadata
 - Better recommendation scoring using rarity, playtime, and recent activity
