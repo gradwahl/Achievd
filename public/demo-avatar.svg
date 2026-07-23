@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Demo Steam avatar">
+  <rect width="128" height="128" rx="16" fill="#111827"/>
+  <circle cx="64" cy="50" r="26" fill="#67e8f9"/>
+  <path d="M24 112c6-27 24-42 40-42s34 15 40 42" fill="#84cc16"/>
+  <path d="M64 18 72 46 100 50 72 54 64 82 56 54 28 50 56 46z" fill="#f8fafc"/>
+</svg>

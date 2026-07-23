@@ -1,0 +1,96 @@
+import type { AchievementView, GameSummary, PlannerItem } from "@/lib/types";
+
+export const testGames: GameSummary[] = [
+  {
+    id: "game-1",
+    appId: 1,
+    name: "Celeste",
+    playtimeMinutes: 620,
+    unlockedAchievementCount: 6,
+    totalAchievementCount: 8,
+    completionPercentage: 75,
+    perfected: false,
+    lastPlayedAt: "2026-07-21T20:30:00.000Z",
+    hasAchievementData: true,
+  },
+  {
+    id: "game-2",
+    appId: 2,
+    name: "Portal 2",
+    playtimeMinutes: 440,
+    unlockedAchievementCount: 1,
+    totalAchievementCount: 4,
+    completionPercentage: 25,
+    perfected: false,
+    lastPlayedAt: "2026-07-10T20:30:00.000Z",
+    hasAchievementData: true,
+  },
+  {
+    id: "game-3",
+    appId: 3,
+    name: "Townscaper",
+    playtimeMinutes: 90,
+    unlockedAchievementCount: 0,
+    totalAchievementCount: 0,
+    completionPercentage: 0,
+    perfected: false,
+    hasAchievementData: false,
+  },
+];
+
+export const testAchievementsByAppId: Record<number, AchievementView[]> = {
+  1: [
+    {
+      id: "achievement-1",
+      gameId: "game-1",
+      appId: 1,
+      apiName: "summit",
+      displayName: "Reach the Summit",
+      description: "Climb the mountain.",
+      hidden: false,
+      globalCompletionPercentage: 20,
+      rarity: "uncommon",
+      unlocked: true,
+      unlockedAt: "2026-07-20T20:30:00.000Z",
+    },
+    {
+      id: "achievement-2",
+      gameId: "game-1",
+      appId: 1,
+      apiName: "moon",
+      displayName: "Moon Berry",
+      description: "Secret berry.",
+      hidden: true,
+      globalCompletionPercentage: 4,
+      rarity: "ultra-rare",
+      unlocked: false,
+    },
+  ],
+  2: [
+    {
+      id: "achievement-3",
+      gameId: "game-2",
+      appId: 2,
+      apiName: "wake",
+      displayName: "Wake Up",
+      hidden: false,
+      globalCompletionPercentage: 80,
+      rarity: "common",
+      unlocked: true,
+    },
+  ],
+};
+
+export const testPinnedAchievements: PlannerItem[] = [
+  {
+    id: "pin-1",
+    achievement: testAchievementsByAppId[1]![1]!,
+    game: testGames[0]!,
+    notes: "Practice route",
+    manualProgressText: "2 checkpoints",
+    priority: "medium",
+    state: "active",
+    position: 0,
+    createdAt: "2026-07-23T12:00:00.000Z",
+  },
+];
