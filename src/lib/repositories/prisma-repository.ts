@@ -4,6 +4,7 @@ import { AppError } from "@/lib/errors";
 import { classifyRarity, completionPercentage } from "@/lib/calculations";
 import { prisma } from "@/lib/repositories/prisma";
 import { hasPotentialAchievementStats } from "@/lib/steam/filters";
+import { themePreferences } from "@/lib/types";
 import type {
   AppRepository,
   PinPatch,
@@ -81,7 +82,7 @@ const preferencesSchema = z.object({
       rare: z.number().min(0).max(100),
     })
     .default(defaultPreferences.rarityThresholds),
-  theme: z.enum(["dark", "light", "system"]).default(defaultPreferences.theme),
+  theme: z.enum(themePreferences).default(defaultPreferences.theme),
 });
 
 function preferences(value: unknown): UserPreferences {
@@ -130,6 +131,8 @@ function achievementView(
 ): AchievementView {
   const userAchievement = row.userAchievements[0];
   const pinned = row.pinnedAchievements[0];
+  const imageUrl = (value: string | null) =>
+    value && /\.(?:jpe?g|png|webp)(?:\?|$)/i.test(value) ? value : undefined;
   return {
     id: row.id,
     gameId: row.gameId,
@@ -138,8 +141,8 @@ function achievementView(
     displayName: row.displayName,
     description: row.description ?? undefined,
     hidden: row.hidden,
-    lockedIconUrl: row.lockedIconUrl ?? undefined,
-    unlockedIconUrl: row.unlockedIconUrl ?? undefined,
+    lockedIconUrl: imageUrl(row.lockedIconUrl),
+    unlockedIconUrl: imageUrl(row.unlockedIconUrl),
     globalCompletionPercentage: row.globalCompletionPercentage ?? undefined,
     rarity: classifyRarity(
       row.globalCompletionPercentage ?? undefined,
@@ -252,6 +255,30 @@ export const prismaRepository: AppRepository = {
       acc[appId].push(achievementView(row, prefs.rarityThresholds));
       return acc;
     }, {});
+  },
+
+  async getSuggestedAchievements(userId, limit) {
+    const prefs = await this.getPreferences(userId);
+    const rows: AchievementRow[] = await prisma.achievement.findMany({
+      where: {
+        game: { userGames: { some: { userId, hidden: false } } },
+        userAchievements: { none: { userId, unlocked: true } },
+      },
+      include: {
+        game: { select: { steamAppId: true } },
+        userAchievements: { where: { userId } },
+        pinnedAchievements: {
+          where: { userId, state: { not: "ARCHIVED" } },
+          select: { id: true },
+        },
+      },
+      orderBy: [
+        { globalCompletionPercentage: { sort: "desc", nulls: "last" } },
+        { displayName: "asc" },
+      ],
+      take: limit,
+    });
+    return rows.map((row) => achievementView(row, prefs.rarityThresholds));
   },
 
   async getGameDetail(userId, appId) {

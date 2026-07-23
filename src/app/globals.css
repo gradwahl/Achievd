@@ -3,6 +3,10 @@
 :root {
   --background: #080b10;
   --foreground: #e5eef7;
+  --accent: #67e8f9;
+  --accent-hover: #a5f3fc;
+  --accent-soft: rgb(103 232 249 / 0.1);
+  --accent-ring: rgb(103 232 249 / 0.3);
 }
 
 @theme inline {
@@ -23,15 +27,214 @@ body {
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
+  user-select: none;
+}
+
+input,
+textarea,
+[contenteditable="true"] {
+  user-select: text;
 }
 
 ::selection {
-  background: #67e8f9;
+  background: var(--accent);
   color: #08111c;
 }
 
 html {
   color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  color-scheme: light;
+}
+
+:root[data-theme="neon-blue"] {
+  --background: #04131f;
+  --accent: #38bdf8;
+  --accent-hover: #7dd3fc;
+  --accent-soft: rgb(56 189 248 / 0.14);
+  --accent-ring: rgb(56 189 248 / 0.35);
+}
+
+:root[data-theme="neon-red"] {
+  --background: #1b070b;
+  --accent: #fb7185;
+  --accent-hover: #fda4af;
+  --accent-soft: rgb(251 113 133 / 0.14);
+  --accent-ring: rgb(251 113 133 / 0.35);
+}
+
+:root[data-theme="neon-green"] {
+  --background: #06170d;
+  --accent: #4ade80;
+  --accent-hover: #86efac;
+  --accent-soft: rgb(74 222 128 / 0.14);
+  --accent-ring: rgb(74 222 128 / 0.35);
+}
+
+:root[data-theme="neon-yellow"] {
+  --background: #191503;
+  --accent: #fde047;
+  --accent-hover: #fef08a;
+  --accent-soft: rgb(253 224 71 / 0.14);
+  --accent-ring: rgb(253 224 71 / 0.35);
+}
+
+:root[data-theme="neon-silver"] {
+  --background: #10151c;
+  --accent: #cbd5e1;
+  --accent-hover: #e2e8f0;
+  --accent-soft: rgb(203 213 225 / 0.14);
+  --accent-ring: rgb(203 213 225 / 0.35);
+}
+
+:root[data-theme="neon-gold"] {
+  --background: #1c1303;
+  --accent: #fbbf24;
+  --accent-hover: #fcd34d;
+  --accent-soft: rgb(251 191 36 / 0.14);
+  --accent-ring: rgb(251 191 36 / 0.35);
+}
+
+:root[data-theme="neon-platinum"] {
+  --background: #121619;
+  --accent: #e5e7eb;
+  --accent-hover: #f8fafc;
+  --accent-soft: rgb(229 231 235 / 0.14);
+  --accent-ring: rgb(229 231 235 / 0.35);
+}
+
+:root[data-theme="neon-bronze"] {
+  --background: #1a0d04;
+  --accent: #fb923c;
+  --accent-hover: #fdba74;
+  --accent-soft: rgb(251 146 60 / 0.14);
+  --accent-ring: rgb(251 146 60 / 0.35);
+}
+
+:root[data-theme="neon-pink"] {
+  --background: #1b0713;
+  --accent: #f472b6;
+  --accent-hover: #f9a8d4;
+  --accent-soft: rgb(244 114 182 / 0.14);
+  --accent-ring: rgb(244 114 182 / 0.35);
+}
+
+:root[data-theme="neon-purple"] {
+  --background: #16091f;
+  --accent: #c084fc;
+  --accent-hover: #d8b4fe;
+  --accent-soft: rgb(192 132 252 / 0.14);
+  --accent-ring: rgb(192 132 252 / 0.35);
+}
+
+:root[data-theme="neon-indigo"] {
+  --background: #0d1026;
+  --accent: #818cf8;
+  --accent-hover: #a5b4fc;
+  --accent-soft: rgb(129 140 248 / 0.14);
+  --accent-ring: rgb(129 140 248 / 0.35);
+}
+
+:root[data-theme="neon-cyan"] {
+  --background: #03171c;
+  --accent: #22d3ee;
+  --accent-hover: #67e8f9;
+  --accent-soft: rgb(34 211 238 / 0.14);
+  --accent-ring: rgb(34 211 238 / 0.35);
+}
+
+:root[data-theme="neon-teal"] {
+  --background: #031713;
+  --accent: #2dd4bf;
+  --accent-hover: #5eead4;
+  --accent-soft: rgb(45 212 191 / 0.14);
+  --accent-ring: rgb(45 212 191 / 0.35);
+}
+
+:root:not([data-theme="light"]) :is(body, .bg-\[\#080b10\]) {
+  background-color: var(--background) !important;
+}
+
+:root:not([data-theme="light"]) .bg-\[\#080b10\]\/95 {
+  background-color: color-mix(in srgb, var(--background) 95%, transparent) !important;
+}
+
+:root:not([data-theme="light"]) :is(.bg-cyan-300, .hover\:bg-cyan-200:hover) {
+  background-color: var(--accent) !important;
+}
+
+:root:not([data-theme="light"]) :is(.text-cyan-100, .text-cyan-300, .hover\:text-cyan-100:hover) {
+  color: var(--accent-hover) !important;
+}
+
+:root:not([data-theme="light"]) :is(.border-cyan-300, .hover\:border-cyan-300:hover) {
+  border-color: var(--accent) !important;
+}
+
+:root:not([data-theme="light"]) .bg-cyan-300\/10 {
+  background-color: var(--accent-soft) !important;
+}
+
+:root:not([data-theme="light"]) .hover\:border-cyan-300\/60:hover {
+  border-color: var(--accent) !important;
+}
+
+:root:not([data-theme="light"]) :is(.focus-visible\:outline-cyan-300:focus-visible, .focus-visible\:border-cyan-300:focus-visible) {
+  border-color: var(--accent) !important;
+  outline-color: var(--accent) !important;
+}
+
+:root:not([data-theme="light"]) .focus-visible\:ring-cyan-300\/30:focus-visible {
+  --tw-ring-color: var(--accent-ring) !important;
+}
+
+:root:not([data-theme="light"]) .accent-cyan-300 {
+  accent-color: var(--accent);
+}
+
+:root[data-theme="light"] body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+:root[data-theme="light"] :is(.bg-\[\#080b10\], .bg-slate-950) {
+  background-color: #f8fafc !important;
+}
+
+:root[data-theme="light"] :is(.bg-\[\#080b10\]\/95, .bg-slate-950\/80) {
+  background-color: rgb(248 250 252 / 0.95) !important;
+}
+
+:root[data-theme="light"] :is(.bg-slate-900, .bg-slate-800) {
+  background-color: #f1f5f9 !important;
+}
+
+:root[data-theme="light"] :is(.hover\:bg-slate-900:hover, .hover\:bg-slate-800:hover) {
+  background-color: #e2e8f0 !important;
+}
+
+:root[data-theme="light"] :is(.text-white, .text-slate-100, .text-slate-200, .text-slate-300) {
+  color: #0f172a !important;
+}
+
+:root[data-theme="light"] :is(.bg-red-500.text-white, .bg-emerald-500.text-white) {
+  color: #fff !important;
+}
+
+:root[data-theme="light"] .text-slate-400 {
+  color: #475569 !important;
+}
+
+:root[data-theme="light"] .text-slate-500 {
+  color: #64748b !important;
+}
+
+:root[data-theme="light"] :is(.border-slate-800, .border-slate-700) {
+  border-color: #cbd5e1 !important;
 }
 
 button,

@@ -8,7 +8,7 @@ const envSchema = z
     APP_URL: z.string().url().default("http://localhost:3000"),
     DATABASE_URL: z
       .string()
-      .default("postgresql://postgres:postgres@localhost:5432/achievement_compass"),
+      .default("postgresql://postgres:postgres@localhost:5432/Achievd"),
     SESSION_SECRET: z.string().optional(),
     STEAM_API_KEY: z.string().optional(),
     STEAMGRIDDB_API_KEY: z.string().optional(),

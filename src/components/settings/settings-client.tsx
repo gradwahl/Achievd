@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Download, Save, Trash2 } from "lucide-react";
 import { productConfig } from "@/config/product";
+import { themePreferences } from "@/lib/types";
 import type {
   GameSort,
   ThemePreference,
@@ -12,9 +13,29 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { applyThemePreference } from "@/components/layout/theme-applier";
 
 type ApiResponse =
   { ok: true; preferences?: UserPreferences } | { ok: false; message: string };
+
+const themeLabels: Record<ThemePreference, string> = {
+  dark: "Dark",
+  light: "Light",
+  system: "System",
+  "neon-blue": "Neon blue",
+  "neon-red": "Neon red",
+  "neon-green": "Neon green",
+  "neon-yellow": "Neon yellow",
+  "neon-silver": "Neon silver",
+  "neon-gold": "Neon gold",
+  "neon-platinum": "Neon platinum",
+  "neon-bronze": "Neon bronze",
+  "neon-pink": "Neon pink",
+  "neon-purple": "Neon purple",
+  "neon-indigo": "Neon indigo",
+  "neon-cyan": "Neon cyan",
+  "neon-teal": "Neon teal",
+};
 
 export function SettingsClient({
   initialPreferences,
@@ -36,7 +57,7 @@ export function SettingsClient({
   const [toast, setToast] = useState("");
   const [isPending, startTransition] = useTransition();
 
-  async function save(next = preferences) {
+  async function save(next = preferences, message = "Settings saved.") {
     const response = await fetch("/api/settings", {
       method: "PATCH",
       headers: {
@@ -48,7 +69,8 @@ export function SettingsClient({
     const body = (await response.json()) as ApiResponse;
     if (body.ok && body.preferences) {
       setPreferences(body.preferences);
-      setToast("Settings saved.");
+      applyThemePreference(body.preferences.theme);
+      setToast(message);
       return;
     }
     setToast(body.ok ? "Settings could not be saved." : body.message);
@@ -194,22 +216,37 @@ export function SettingsClient({
               <option value="name">Name</option>
             </Select>
           </label>
-          <label className="grid gap-2">
+          <div className="grid gap-2">
             <span className="text-sm font-medium text-slate-300">Theme</span>
             <Select
               value={preferences.theme}
-              onChange={(event) =>
+              onChange={(event) => {
+                const theme = event.target.value as ThemePreference;
                 setPreferences({
                   ...preferences,
-                  theme: event.target.value as ThemePreference,
-                })
+                  theme,
+                });
+                applyThemePreference(theme);
+              }}
+            >
+              {themePreferences.map((theme) => (
+                <option key={theme} value={theme}>
+                  {themeLabels[theme]}
+                </option>
+              ))}
+            </Select>
+            <Button
+              type="button"
+              size="sm"
+              disabled={isPending}
+              onClick={() =>
+                startTransition(() => save(preferences, "Theme saved."))
               }
             >
-              <option value="dark">Dark</option>
-              <option value="light">Light</option>
-              <option value="system">System</option>
-            </Select>
-          </label>
+              <Save className="h-4 w-4" aria-hidden="true" />
+              Save Theme
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

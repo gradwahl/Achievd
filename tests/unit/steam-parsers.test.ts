@@ -59,4 +59,24 @@ describe("Steam response parsing", () => {
       }),
     ).toEqual([{ apiName: "ACH_WIN", percent: 12.5 }]);
   });
+
+  it("drops Steam achievement folder URLs without image filenames", () => {
+    const parsed = parseAchievementSchema(201810, {
+      game: {
+        availableGameStats: {
+          achievements: [
+            {
+              name: "ACH_GUNNER",
+              icon: "https://steamcdn-a.akamaihd.net/steamcommunity/public/images/apps/201810/icon.jpg",
+              icongray:
+                "https://steamcdn-a.akamaihd.net/steamcommunity/public/images/apps/201810/",
+            },
+          ],
+        },
+      },
+    });
+
+    expect(parsed.achievements[0]?.lockedIconUrl).toBeUndefined();
+    expect(parsed.achievements[0]?.unlockedIconUrl).toMatch(/icon\.jpg$/);
+  });
 });

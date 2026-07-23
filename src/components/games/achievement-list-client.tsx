@@ -13,7 +13,7 @@ import type { AchievementView, RarityCategory } from "@/lib/types";
 import { formatDate, cn } from "@/lib/utils";
 import { rarityLabel } from "@/lib/calculations";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClassName } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
@@ -22,14 +22,29 @@ import { Select } from "@/components/ui/select";
 type ApiResponse =
   { ok: true; item?: { id: string } } | { ok: false; message: string };
 
+function YoutubeGuideIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M21.6 7.2a2.8 2.8 0 0 0-2-2C17.9 4.8 12 4.8 12 4.8s-5.9 0-7.6.4a2.8 2.8 0 0 0-2 2A29 29 0 0 0 2 12a29 29 0 0 0 .4 4.8 2.8 2.8 0 0 0 2 2c1.7.4 7.6.4 7.6.4s5.9 0 7.6-.4a2.8 2.8 0 0 0 2-2A29 29 0 0 0 22 12a29 29 0 0 0-.4-4.8ZM10 15.2V8.8l5.2 3.2L10 15.2Z" />
+    </svg>
+  );
+}
+
 export function AchievementListClient({
   achievements,
   csrfToken,
   defaultShowHidden,
+  gameName,
 }: {
   achievements: AchievementView[];
   csrfToken: string;
   defaultShowHidden: boolean;
+  gameName: string;
 }) {
   const [items, setItems] = useState(achievements);
   const [search, setSearch] = useState("");
@@ -79,6 +94,15 @@ export function AchievementListClient({
     setToast(
       achievement.pinnedId ? "Removed from planner." : "Pinned to planner.",
     );
+  }
+
+  function guideUrl(site: "google" | "youtube", achievement: AchievementView) {
+    const query = encodeURIComponent(
+      `${gameName} ${achievement.displayName} achievement guide`,
+    );
+    return site === "google"
+      ? `https://www.google.com/search?q=${query}`
+      : `https://www.youtube.com/results?search_query=${query}`;
   }
 
   return (
@@ -249,21 +273,47 @@ export function AchievementListClient({
                         : ""}
                     </p>
                   </div>
-                  <Button
-                    type="button"
-                    variant={achievement.pinnedId ? "secondary" : "default"}
-                    disabled={isPending}
-                    onClick={() =>
-                      startTransition(() => togglePin(achievement))
-                    }
-                  >
-                    {achievement.pinnedId ? (
-                      <PinOff className="h-4 w-4" aria-hidden="true" />
-                    ) : (
-                      <Pin className="h-4 w-4" aria-hidden="true" />
-                    )}
-                    {achievement.pinnedId ? "Unpin" : "Pin"}
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                    <a
+                      href={guideUrl("google", achievement)}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`Search Google for ${achievement.displayName} guide`}
+                      className={buttonClassName({
+                        variant: "secondary",
+                        size: "icon",
+                      })}
+                    >
+                      <span aria-hidden="true">G</span>
+                    </a>
+                    <a
+                      href={guideUrl("youtube", achievement)}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`Search YouTube for ${achievement.displayName} guide`}
+                      className={buttonClassName({
+                        variant: "secondary",
+                        size: "icon",
+                      })}
+                    >
+                      <YoutubeGuideIcon />
+                    </a>
+                    <Button
+                      type="button"
+                      variant={achievement.pinnedId ? "secondary" : "default"}
+                      disabled={isPending}
+                      onClick={() =>
+                        startTransition(() => togglePin(achievement))
+                      }
+                    >
+                      {achievement.pinnedId ? (
+                        <PinOff className="h-4 w-4" aria-hidden="true" />
+                      ) : (
+                        <Pin className="h-4 w-4" aria-hidden="true" />
+                      )}
+                      {achievement.pinnedId ? "Unpin" : "Pin"}
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             );

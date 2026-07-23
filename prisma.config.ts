@@ -8,6 +8,6 @@ export default defineConfig({
   datasource: {
     url:
       process.env.DATABASE_URL ??
-      "postgresql://postgres:postgres@localhost:5432/achievement_compass",
+      "postgresql://postgres:postgres@localhost:5432/Achievd",
   },
 });

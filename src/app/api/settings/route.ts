@@ -5,6 +5,7 @@ import { errorResponse } from "@/lib/errors";
 import { getRepository } from "@/lib/repositories";
 import { assertCsrf } from "@/lib/security/csrf";
 import { invalidateAppDataCache } from "@/lib/services/app-service";
+import { themePreferences } from "@/lib/types";
 
 const settingsSchema = z.object({
   spoilerMode: z.enum(["hide", "show"]).optional(),
@@ -12,7 +13,7 @@ const settingsSchema = z.object({
   defaultSort: z
     .enum(["completion", "remaining", "recent", "playtime", "name"])
     .optional(),
-  theme: z.enum(["dark", "light", "system"]).optional(),
+  theme: z.enum(themePreferences).optional(),
   rarityThresholds: z
     .object({
       common: z.number().min(0).max(100),

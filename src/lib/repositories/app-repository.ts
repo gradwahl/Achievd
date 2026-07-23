@@ -23,6 +23,10 @@ export type AppRepository = {
   getAchievementsByAppId(
     userId: string,
   ): Promise<Record<number, AchievementView[]>>;
+  getSuggestedAchievements(
+    userId: string,
+    limit: number,
+  ): Promise<AchievementView[]>;
   getGameDetail(userId: string, appId: number): Promise<GameDetailView>;
   hideGame(userId: string, appId: number, hidden: boolean): Promise<void>;
   updateGameBoxArt(

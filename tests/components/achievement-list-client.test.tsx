@@ -19,6 +19,7 @@ describe("AchievementListClient", () => {
         achievements={testAchievementsByAppId[1]!}
         csrfToken="csrf"
         defaultShowHidden={false}
+        gameName="Celeste"
       />,
     );
 
@@ -34,5 +35,11 @@ describe("AchievementListClient", () => {
 
     await user.click(screen.getAllByRole("button", { name: /^pin$/i })[0]!);
     expect(await screen.findByText("Pinned to planner.")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/search google for moon berry guide/i),
+    ).toHaveAttribute(
+      "href",
+      "https://www.google.com/search?q=Celeste%20Moon%20Berry%20achievement%20guide",
+    );
   });
 });

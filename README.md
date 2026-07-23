@@ -6,6 +6,16 @@ Achievd is a desktop app for seeing your Steam achievement progress, finding gam
 
 ---
 
+## Screenshots
+
+![Achievd screenshot 1](https://i.ibb.co/v6fBtY6h/electron-5n-MFFm8-Qrq.png)
+![Achievd screenshot 2](https://i.ibb.co/tPWhM2h7/electron-5-Xsr8-RJccs.png)
+![Achievd screenshot 3](https://i.ibb.co/VRS7vWj/electron-dz88-X4-Effe.png)
+![Achievd screenshot 4](https://i.ibb.co/ZzrD6Ss8/electron-HAm9-DCVRKW.png)
+![Achievd screenshot 5](https://i.ibb.co/nsxWt6gF/electron-QEw-Kg29t-Im.png)
+
+---
+
 ## What is Achievd?
 
 Achievd is a live Steam achievement assistant built with Electron, Next.js, Prisma, and PostgreSQL.
@@ -40,7 +50,21 @@ It does **not** unlock, lock, or modify Steam achievements. It reads your Steam 
 pnpm install
 ```
 
-### 2. Start local PostgreSQL
+### 2. Configure environment
+
+Create `.env` from `.env.example` and keep the default local database URL unless you are using your own PostgreSQL instance.
+
+```env
+APP_URL=http://localhost:3000
+SESSION_SECRET=replace-with-at-least-32-random-characters
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/Achievd
+STEAM_API_KEY=
+STEAMGRIDDB_API_KEY=
+```
+
+`STEAM_API_KEY` and `STEAMGRIDDB_API_KEY` are optional. Achievd can also store a Steam API key per local account.
+
+### 3. Start local PostgreSQL
 
 This repo includes a portable local Postgres setup once installed through the helper flow:
 
@@ -51,16 +75,16 @@ pnpm postgres:start
 Connection string used by default:
 
 ```text
-postgresql://postgres:postgres@localhost:5432/achievement_compass
+postgresql://postgres:postgres@localhost:5432/Achievd
 ```
 
-### 3. Initialize the database
+### 4. Initialize the database
 
 ```bash
 pnpm db:migrate
 ```
 
-### 4. Run the desktop app
+### 5. Run the desktop app
 
 ```bash
 pnpm desktop:dev
@@ -69,6 +93,7 @@ pnpm desktop:dev
 Create a local account in the app with:
 
 - Username and password
+- Password confirmation
 - Steam Web API key
 - Steam64ID
 
@@ -162,6 +187,7 @@ pnpm desktop:portable
 
 ```bash
 pnpm dev
+pnpm start
 pnpm desktop:dev
 pnpm desktop:build
 pnpm desktop:package
@@ -172,6 +198,8 @@ pnpm db:migrate
 pnpm prisma:generate
 pnpm typecheck
 pnpm lint
+pnpm format
+pnpm format:check
 pnpm test
 pnpm test:unit
 pnpm test:e2e

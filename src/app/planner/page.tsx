@@ -9,21 +9,15 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 
+const SUGGESTION_LIMIT = 20;
+
 export default async function SuggestionPage() {
   const session = await requireSession();
-  const [games, achievementsByAppId] = await Promise.all([
+  const [games, suggestions] = await Promise.all([
     getGamesData(session.id),
-    getRepository().getAchievementsByAppId(session.id),
+    getRepository().getSuggestedAchievements(session.id, SUGGESTION_LIMIT),
   ]);
   const gameNames = new Map(games.map((game) => [game.appId, game.name]));
-  const allAchievements = Object.values(achievementsByAppId)
-    .flat()
-    .sort(
-      (a, b) =>
-        (b.globalCompletionPercentage ?? -1) -
-          (a.globalCompletionPercentage ?? -1) ||
-        a.displayName.localeCompare(b.displayName),
-    );
 
   return (
     <AppShell session={session}>
@@ -31,13 +25,13 @@ export default async function SuggestionPage() {
         <div>
           <h1 className="text-2xl font-bold text-white">Suggestion</h1>
           <p className="mt-2 text-sm text-slate-400">
-            All trophies sorted from most common to rarest.
+            20 locked trophies sorted from most common to rarest.
           </p>
         </div>
 
-        {allAchievements.length ? (
+        {suggestions.length ? (
           <div className="space-y-2">
-            {allAchievements.map((achievement) => (
+            {suggestions.map((achievement) => (
               <Link
                 key={achievement.id}
                 href={`/games/${achievement.appId}`}

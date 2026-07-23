@@ -120,7 +120,7 @@ export default async function DashboardPage({
               />
               <StatCard
                 label="Recent unlocks"
-                value={String(dashboard.recentAchievements.length)}
+                value={String(monthChange.recentUnlocks)}
                 help="Latest observed achievements"
                 change={signed(monthChange.recentUnlocks)}
                 icon={<Award className="h-5 w-5" aria-hidden="true" />}

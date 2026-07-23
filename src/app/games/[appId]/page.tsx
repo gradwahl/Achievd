@@ -111,6 +111,7 @@ export default async function GameDetailPage({
             achievements={detail.achievements}
             csrfToken={session.csrfToken}
             defaultShowHidden={preferences.spoilerMode === "show"}
+            gameName={detail.game.name}
           />
         ) : (
           <EmptyState title="No achievement data">

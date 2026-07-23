@@ -7,6 +7,7 @@ import type { SessionUser } from "@/lib/types";
 import { buttonClassName } from "@/components/ui/button";
 import { MainNav } from "@/components/layout/main-nav";
 import { SyncProgress } from "@/components/layout/sync-progress";
+import { ThemeApplier } from "@/components/layout/theme-applier";
 
 export async function AppShell({
   session,
@@ -16,10 +17,14 @@ export async function AppShell({
   children: React.ReactNode;
 }) {
   const profile = await getRepository().getProfile(session.id);
-  const syncStatus = await getUserSyncStatus(session.id);
+  const [syncStatus, preferences] = await Promise.all([
+    getUserSyncStatus(session.id),
+    getRepository().getPreferences(session.id),
+  ]);
 
   return (
     <div className="min-h-screen bg-[#080b10]">
+      <ThemeApplier preference={preferences.theme} />
       <header className="sticky top-0 z-20 border-b border-slate-800 bg-[#080b10]/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <div className="flex items-center justify-between gap-4">

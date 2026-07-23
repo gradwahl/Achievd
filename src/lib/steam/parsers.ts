@@ -107,6 +107,12 @@ function unixToIso(value?: number) {
   return new Date(value * 1000).toISOString();
 }
 
+function imageUrl(value?: string) {
+  return value && /\.(?:jpe?g|png|webp)(?:\?|$)/i.test(value)
+    ? value
+    : undefined;
+}
+
 export function parsePlayerSummary(payload: unknown): SteamProfile {
   const parsed = playerSummarySchema.parse(payload);
   const player = parsed.response.players[0];
@@ -173,8 +179,8 @@ export function parseAchievementSchema(
       displayName: achievement.displayName ?? achievement.name,
       description: achievement.description,
       hidden: achievement.hidden === 1,
-      lockedIconUrl: achievement.icongray,
-      unlockedIconUrl: achievement.icon,
+      lockedIconUrl: imageUrl(achievement.icongray),
+      unlockedIconUrl: imageUrl(achievement.icon),
     })) ?? [];
 
   return {

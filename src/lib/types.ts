@@ -1,11 +1,30 @@
 import type { RarityThresholds } from "@/config/product";
 
+export const themePreferences = [
+  "dark",
+  "light",
+  "system",
+  "neon-blue",
+  "neon-red",
+  "neon-green",
+  "neon-yellow",
+  "neon-silver",
+  "neon-gold",
+  "neon-platinum",
+  "neon-bronze",
+  "neon-pink",
+  "neon-purple",
+  "neon-indigo",
+  "neon-cyan",
+  "neon-teal",
+] as const;
+
 export type VisibilityState = "public" | "private" | "friends_only" | "unknown";
 export type RarityCategory = "common" | "uncommon" | "rare" | "ultra-rare";
 export type LibraryView = "cards" | "list";
 export type GameSort =
   "completion" | "remaining" | "recent" | "playtime" | "name";
-export type ThemePreference = "dark" | "light" | "system";
+export type ThemePreference = (typeof themePreferences)[number];
 export type PinPriority = "low" | "medium" | "high";
 export type PinState = "active" | "completed" | "archived";
 
