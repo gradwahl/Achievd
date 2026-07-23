@@ -8,11 +8,20 @@ Achievd is a desktop app for seeing your Steam achievement progress, finding gam
 
 ## Screenshots
 
-![Achievd screenshot 1](https://i.ibb.co/v6fBtY6h/electron-5n-MFFm8-Qrq.png)
-![Achievd screenshot 2](https://i.ibb.co/tPWhM2h7/electron-5-Xsr8-RJccs.png)
-![Achievd screenshot 3](https://i.ibb.co/VRS7vWj/electron-dz88-X4-Effe.png)
-![Achievd screenshot 4](https://i.ibb.co/ZzrD6Ss8/electron-HAm9-DCVRKW.png)
-![Achievd screenshot 5](https://i.ibb.co/nsxWt6gF/electron-QEw-Kg29t-Im.png)
+![Home](docs/screenshots/home.png)
+_Home_
+
+![Synced Games](docs/screenshots/synced-games.png)
+_Synced Games_
+
+![Suggested What to earn next (Easiest>Hardest)](docs/screenshots/suggested-next.png)
+_Suggested What to earn next (Easiest>Hardest)_
+
+![Settings](docs/screenshots/settings.png)
+_Settings_
+
+![Achievement Layout](docs/screenshots/achievement-layout.png)
+_Achievement Layout_
 
 ---
 
