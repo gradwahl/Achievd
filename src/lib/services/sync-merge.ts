@@ -29,13 +29,25 @@ export function mergeSyncState(
       id: previous?.id ?? `game-${game.appId}`,
       appId: game.appId,
       name: game.name ?? previous?.name ?? `App ${game.appId}`,
+      genres: game.genres ?? previous?.genres ?? [],
+      developers: game.developers ?? previous?.developers ?? [],
+      publishers: game.publishers ?? previous?.publishers ?? [],
       capsuleImageUrl: game.capsuleImageUrl ?? previous?.capsuleImageUrl,
       headerImageUrl: game.headerImageUrl ?? previous?.headerImageUrl,
       playtimeMinutes: game.playtimeMinutes ?? previous?.playtimeMinutes,
       unlockedAchievementCount: unlocked,
       totalAchievementCount: total,
+      unobtainableAchievementCount:
+        game.unobtainableAchievementCount ??
+        previous?.unobtainableAchievementCount ??
+        0,
       completionPercentage: completionPercentage(unlocked, total),
       perfected: total > 0 && unlocked === total,
+      hasPaidDlc: game.hasPaidDlc ?? previous?.hasPaidDlc ?? false,
+      fastestCompletionTime:
+        game.fastestCompletionTime ?? previous?.fastestCompletionTime,
+      medianCompletionTime:
+        game.medianCompletionTime ?? previous?.medianCompletionTime,
       lastPlayedAt: game.lastPlayedAt ?? previous?.lastPlayedAt,
       lastSyncedAt: game.lastSyncedAt ?? previous?.lastSyncedAt,
       hasAchievementData: total > 0,

@@ -1,6 +1,8 @@
 import { revalidateTag, unstable_cache } from "next/cache";
 import { getRepository } from "@/lib/repositories";
+import { prisma } from "@/lib/repositories/prisma";
 import { buildRecommendations } from "@/lib/services/recommendations";
+import { getSteamAdapter } from "@/lib/steam/client";
 import type { DashboardView } from "@/lib/types";
 
 const APP_DATA_TAG = "app-data";
@@ -16,12 +18,6 @@ const EMPTY_MONTH_CHANGE: DashboardView["monthChange"] = {
 const getCachedDashboardData = unstable_cache(
   async (userId: string) => getRepository().getDashboard(userId),
   ["dashboard-data"],
-  { tags: [APP_DATA_TAG] },
-);
-
-const getCachedGamesData = unstable_cache(
-  async (userId: string) => getRepository().getGames(userId),
-  ["games-data"],
   { tags: [APP_DATA_TAG] },
 );
 
@@ -57,11 +53,35 @@ export async function getDashboardData(userId: string) {
 }
 
 export async function getGamesData(userId: string) {
-  return getCachedGamesData(userId);
+  return getRepository().getGames(userId);
 }
 
 export async function getGameDetailData(userId: string, appId: number) {
-  return getRepository().getGameDetail(userId, appId);
+  const detail = await getRepository().getGameDetail(userId, appId);
+  if (
+    detail.game.genres.length &&
+    detail.game.developers.length &&
+    detail.game.publishers.length
+  ) {
+    return detail;
+  }
+
+  const storeDetails = await getSteamAdapter()
+    .then((adapter) => adapter.getStoreDetails(appId))
+    .catch(() => ({ developers: [], genres: [], publishers: [] }));
+  if (
+    !storeDetails.genres.length &&
+    !storeDetails.developers.length &&
+    !storeDetails.publishers.length
+  ) {
+    return detail;
+  }
+
+  await prisma.game.update({
+    where: { steamAppId: appId },
+    data: storeDetails,
+  });
+  return { ...detail, game: { ...detail.game, ...storeDetails } };
 }
 
 export async function getPlannerData(userId: string) {

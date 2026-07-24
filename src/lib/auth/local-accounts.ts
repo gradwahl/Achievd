@@ -51,11 +51,7 @@ function hashPassword(password: string, salt: string) {
   return key(password, salt).toString("base64url");
 }
 
-function encryptSecret(
-  value: string,
-  password: string,
-  salt: string,
-) {
+function encryptSecret(value: string, password: string, salt: string) {
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", key(password, salt), iv);
   const encrypted = Buffer.concat([
@@ -104,7 +100,7 @@ async function readStore(): Promise<Store> {
 
 async function writeStore(store: z.infer<typeof storeSchema>) {
   await mkdir(dataDir(), { recursive: true });
-  await writeFile(storePath(), JSON.stringify(store, null, 2));
+  await writeFile(storePath(), JSON.stringify(store, null, 2), { mode: 0o600 });
 }
 
 export async function registerLocalAccount(input: {
@@ -174,7 +170,11 @@ export async function loginSavedLocalAccount(username: string) {
 
 export async function setLocalAccountLoginOptions(
   username: string,
-  options: { displayAtLogin?: boolean; autoLogin?: boolean; steamApiKey?: string },
+  options: {
+    displayAtLogin?: boolean;
+    autoLogin?: boolean;
+    steamApiKey?: string;
+  },
 ) {
   const store = await readStore();
   const account = store.accounts.find(

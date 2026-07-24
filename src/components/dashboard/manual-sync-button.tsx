@@ -45,7 +45,7 @@ export function ManualSyncButton({
   }
 
   return (
-    <div className="flex flex-col items-start gap-2">
+    <div className="flex flex-col items-center gap-2 text-center">
       <Button
         type="button"
         disabled={isPending || status.running}
@@ -55,7 +55,7 @@ export function ManualSyncButton({
           className={status.running ? "h-4 w-4 animate-spin" : "h-4 w-4"}
           aria-hidden="true"
         />
-        {status.running ? "Syncing" : "Manual sync"}
+        {status.running ? "Syncing" : "Steam Sync"}
       </Button>
       <p className="text-sm text-slate-400" aria-live="polite">
         {status.message}

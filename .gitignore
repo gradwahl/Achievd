@@ -22,6 +22,7 @@
 # production
 /.desktop-build
 /dist
+/src-tauri/target
 
 # local runtime state
 /.postgres

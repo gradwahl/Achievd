@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Star, Trophy } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ExternalLink,
+  Star,
+  Trophy,
+} from "lucide-react";
 import { requireSession } from "@/lib/auth/session";
 import { getGameDetailData, getSettingsData } from "@/lib/services/app-service";
 import { formatPlaytime, formatRelativeDate } from "@/lib/utils";
@@ -30,6 +36,24 @@ export default async function GameDetailPage({
     0,
     detail.game.totalAchievementCount - detail.game.unlockedAchievementCount,
   );
+  const genres = detail.game.genres ?? [];
+  const developers = detail.game.developers ?? [];
+  const publishers = detail.game.publishers ?? [];
+
+  const tagLink = (type: "genre" | "developer" | "publisher", value: string) =>
+    `/games?${type}=${encodeURIComponent(value)}`;
+  const tagClassName = "text-cyan-300 hover:text-cyan-100";
+  const tags = (type: "genre" | "developer" | "publisher", values: string[]) =>
+    values.length
+      ? values.map((value, index) => (
+          <span key={value}>
+            {index ? ", " : null}
+            <Link href={tagLink(type, value)} className={tagClassName}>
+              {value}
+            </Link>
+          </span>
+        ))
+      : "Unknown";
 
   return (
     <AppShell session={session}>
@@ -44,7 +68,7 @@ export default async function GameDetailPage({
 
         <section className="relative overflow-hidden rounded-lg border border-slate-800 bg-slate-950">
           <BannerEditor game={detail.game} csrfToken={session.csrfToken} />
-          <div className="grid gap-5 p-5 lg:grid-cols-[1fr_320px] lg:items-end">
+          <div className="grid gap-5 p-5 lg:grid-cols-[1fr_320px] lg:items-start">
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-3xl font-bold text-white">
@@ -55,11 +79,68 @@ export default async function GameDetailPage({
                     Perfected
                   </Badge>
                 ) : null}
+                {detail.game.hasPaidDlc ? (
+                  <Badge className="gap-1.5 border-amber-300/60 text-amber-200">
+                    <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+                    Paid DLC required
+                  </Badge>
+                ) : null}
               </div>
-              <p className="mt-2 text-sm text-slate-400">
-                {formatPlaytime(detail.game.playtimeMinutes)} - Last played{" "}
-                {formatRelativeDate(detail.game.lastPlayedAt)}
-              </p>
+              <dl className="mt-3 grid gap-1.5 text-sm text-slate-300">
+                <div>
+                  <dt className="inline text-slate-500">Total Playtime: </dt>
+                  <dd className="inline">
+                    {formatPlaytime(detail.game.playtimeMinutes)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="inline text-slate-500">Last Played: </dt>
+                  <dd className="inline">
+                    {formatRelativeDate(detail.game.lastPlayedAt)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="inline text-slate-500">Genre: </dt>
+                  <dd className="inline">{tags("genre", genres)}</dd>
+                </div>
+                <div>
+                  <dt className="inline text-slate-500">Publisher: </dt>
+                  <dd className="inline">{tags("publisher", publishers)}</dd>
+                </div>
+                <div>
+                  <dt className="inline text-slate-500">Developer: </dt>
+                  <dd className="inline">{tags("developer", developers)}</dd>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                  <a
+                    href={`https://store.steampowered.com/app/${detail.game.appId}/`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 text-cyan-300 hover:text-cyan-100"
+                  >
+                    Steam Store
+                    <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                  </a>
+                  <a
+                    href={`https://www.pcgamingwiki.com/api/appid.php?appid=${detail.game.appId}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 text-cyan-300 hover:text-cyan-100"
+                  >
+                    PCGamingWiki
+                    <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                  </a>
+                  <a
+                    href={`https://isthereanydeal.com/steam/app/${detail.game.appId}/`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 text-cyan-300 hover:text-cyan-100"
+                  >
+                    IsThereAnyDeal
+                    <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                  </a>
+                </div>
+              </dl>
             </div>
             <Card>
               <CardContent className="p-4">
@@ -71,7 +152,10 @@ export default async function GameDetailPage({
                     }`}
                   >
                     {detail.game.perfected ? (
-                      <Star className="h-5 w-5 fill-current" aria-hidden="true" />
+                      <Star
+                        className="h-5 w-5 fill-current"
+                        aria-hidden="true"
+                      />
                     ) : null}
                     {detail.game.completionPercentage}%
                   </span>
@@ -101,6 +185,23 @@ export default async function GameDetailPage({
                     <span className="text-slate-500">Total</span>
                   </span>
                 </div>
+                {detail.game.fastestCompletionTime ||
+                detail.game.medianCompletionTime ? (
+                  <div className="mt-4 grid grid-cols-2 gap-2 border-t border-slate-800 pt-3 text-center text-sm">
+                    <span>
+                      <strong className="block text-white">
+                        {formatPlaytime(detail.game.fastestCompletionTime)}
+                      </strong>
+                      <span className="text-slate-500">Fastest</span>
+                    </span>
+                    <span>
+                      <strong className="block text-white">
+                        {formatPlaytime(detail.game.medianCompletionTime)}
+                      </strong>
+                      <span className="text-slate-500">Median</span>
+                    </span>
+                  </div>
+                ) : null}
               </CardContent>
             </Card>
           </div>
@@ -109,7 +210,6 @@ export default async function GameDetailPage({
         {detail.game.hasAchievementData ? (
           <AchievementListClient
             achievements={detail.achievements}
-            csrfToken={session.csrfToken}
             defaultShowHidden={preferences.spoilerMode === "show"}
             gameName={detail.game.name}
           />

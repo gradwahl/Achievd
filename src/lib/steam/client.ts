@@ -1,13 +1,20 @@
+import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { cookies } from "next/headers";
 import { env } from "@/config/env";
 import { productConfig } from "@/config/product";
 import { AppError } from "@/lib/errors";
 import {
   parseAchievementSchema,
+  parseCommunityAchievementSchema,
   parseGlobalAchievementPercentages,
   parseOwnedGames,
   parsePlayerAchievements,
   parsePlayerSummary,
+  parseSteamLibraryCsv,
+  parseStoreDetails,
 } from "@/lib/steam/parsers";
 import type { SteamAdapter } from "@/lib/steam/types";
 
@@ -45,7 +52,7 @@ export class SteamApiClient implements SteamAdapter {
   }
 
   async getOwnedGames(steamId: string) {
-    return parseOwnedGames(
+    const owned = parseOwnedGames(
       await this.cachedGet(
         "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/",
         {
@@ -57,6 +64,14 @@ export class SteamApiClient implements SteamAdapter {
         600_000,
       ),
     );
+    const csvGames = await readSteamLibraryExport(steamId);
+    if (!csvGames.length) return owned;
+
+    const gamesById = new Map(owned.games.map((game) => [game.appId, game]));
+    for (const game of csvGames) {
+      if (!gamesById.has(game.appId)) gamesById.set(game.appId, game);
+    }
+    return { ...owned, games: [...gamesById.values()] };
   }
 
   async getPlayerAchievements(steamId: string, appId: number) {
@@ -73,15 +88,39 @@ export class SteamApiClient implements SteamAdapter {
   }
 
   async getAchievementSchema(appId: number) {
-    return parseAchievementSchema(
+    try {
+      const schema = parseAchievementSchema(
+        appId,
+        await this.cachedGet(
+          "https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/",
+          {
+            key: this.apiKey,
+            appid: String(appId),
+          },
+          86_400_000,
+        ),
+      );
+      return schema.achievements.length
+        ? schema
+        : await this.getPublicAchievementSchema(appId);
+    } catch (error) {
+      if (error instanceof AppError && error.code === "STEAM_PERMANENT") {
+        return this.getPublicAchievementSchema(appId);
+      }
+      throw error;
+    }
+  }
+
+  async getStoreDetails(appId: number) {
+    return parseStoreDetails(
       appId,
       await this.cachedGet(
-        "https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/",
+        "https://store.steampowered.com/api/appdetails",
         {
-          key: this.apiKey,
-          appid: String(appId),
+          appids: String(appId),
+          filters: "developers,genres,publishers",
         },
-        86_400_000,
+        604_800_000,
       ),
     );
   }
@@ -93,6 +132,20 @@ export class SteamApiClient implements SteamAdapter {
         { gameid: String(appId) },
         86_400_000,
       ),
+    );
+  }
+
+  private async getPublicAchievementSchema(appId: number) {
+    const [globalAchievements, communityPage] = await Promise.all([
+      this.getGlobalAchievementPercentages(appId),
+      this.getText(
+        `https://steamcommunity.com/stats/${appId}/achievements?xml=1`,
+      ),
+    ]);
+    return parseCommunityAchievementSchema(
+      appId,
+      communityPage,
+      globalAchievements,
     );
   }
 
@@ -165,6 +218,31 @@ export class SteamApiClient implements SteamAdapter {
       return response.json() as Promise<unknown>;
     });
   }
+
+  private async getText(url: string) {
+    const response = await this.fetcher(url, {
+      headers: { accept: "text/html,application/xhtml+xml" },
+    });
+    if (!response.ok) {
+      throw new AppError(
+        "STEAM_PERMANENT",
+        "Steam rejected the request.",
+        response.status,
+      );
+    }
+    return response.text();
+  }
+}
+
+async function readSteamLibraryExport(steamId: string) {
+  const file = path.join(
+    os.homedir(),
+    "Downloads",
+    `steam-library-${steamId}.csv`,
+  );
+  // ponytail: local CSV fallback for Steam Web API omissions; add UI import if users need arbitrary locations.
+  if (!existsSync(file)) return [];
+  return parseSteamLibraryCsv(await readFile(file, "utf8"));
 }
 
 async function withRetry<T>(operation: () => Promise<T>, attempts = 3) {

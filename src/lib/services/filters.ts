@@ -5,8 +5,12 @@ import type {
   RarityCategory,
 } from "@/lib/types";
 
-export type GameFilter = "all" | "perfected" | "incomplete";
-export type AchievementFilter = "all" | "locked" | "unlocked";
+export type GameFilter = "all" | "perfected" | "incomplete" | "unobtainable";
+export type GameTagFilter = {
+  type: "genre" | "developer" | "publisher";
+  value: string;
+};
+export type AchievementFilter = "all" | "locked" | "unlocked" | "unobtainable";
 export type AchievementSort = "rarity" | "alpha" | "unlocked" | "locked-first";
 
 export function filterGames(
@@ -15,15 +19,30 @@ export function filterGames(
     search?: string;
     filter?: GameFilter;
     sort?: GameSort;
+    tag?: GameTagFilter;
   },
 ) {
   const search = options.search?.trim().toLowerCase() ?? "";
+  const tag = options.tag;
   return games
     .filter((game) => !search || game.name.toLowerCase().includes(search))
+    .filter((game) => {
+      if (!tag) return true;
+      const values =
+        tag.type === "genre"
+          ? game.genres
+          : tag.type === "developer"
+            ? game.developers
+            : game.publishers;
+      return values.some((value) => value === tag.value);
+    })
     .filter((game) => {
       if (options.filter === "perfected") return game.perfected;
       if (options.filter === "incomplete") {
         return game.hasAchievementData && !game.perfected;
+      }
+      if (options.filter === "unobtainable") {
+        return game.unobtainableAchievementCount > 0;
       }
       return true;
     })
@@ -69,6 +88,9 @@ export function filterAchievements(
     .filter((achievement) => {
       if (options.filter === "locked") return !achievement.unlocked;
       if (options.filter === "unlocked") return achievement.unlocked;
+      if (options.filter === "unobtainable") {
+        return achievement.obtainability === 3;
+      }
       return true;
     })
     .filter((achievement) => {

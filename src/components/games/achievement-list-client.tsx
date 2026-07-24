@@ -1,9 +1,8 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
-import { Eye, EyeOff, Pin, PinOff, Search } from "lucide-react";
-import { productConfig } from "@/config/product";
+import { Eye, EyeOff, Search } from "lucide-react";
 import {
   filterAchievements,
   type AchievementFilter,
@@ -19,8 +18,12 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 
-type ApiResponse =
-  { ok: true; item?: { id: string } } | { ok: false; message: string };
+function obtainabilityLabel(value: number) {
+  if (value === 1) return "Broken but obtainable";
+  if (value === 2) return "Conditional";
+  if (value === 3) return "Unobtainable";
+  return "";
+}
 
 function YoutubeGuideIcon() {
   return (
@@ -37,64 +40,43 @@ function YoutubeGuideIcon() {
 
 export function AchievementListClient({
   achievements,
-  csrfToken,
   defaultShowHidden,
   gameName,
 }: {
   achievements: AchievementView[];
-  csrfToken: string;
   defaultShowHidden: boolean;
   gameName: string;
 }) {
-  const [items, setItems] = useState(achievements);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<AchievementFilter>("all");
   const [rarity, setRarity] = useState<RarityCategory | "all">("all");
   const [sort, setSort] = useState<AchievementSort>("rarity");
   const [showHidden, setShowHidden] = useState(defaultShowHidden);
   const [revealedHidden, setRevealedHidden] = useState<Set<string>>(new Set());
-  const [toast, setToast] = useState("");
-  const [isPending, startTransition] = useTransition();
 
   const visibleItems = useMemo(
-    () => filterAchievements(items, { search, filter, rarity, sort }),
-    [items, search, filter, rarity, sort],
+    () => filterAchievements(achievements, { search, filter, rarity, sort }),
+    [achievements, search, filter, rarity, sort],
   );
-
-  async function togglePin(achievement: AchievementView) {
-    const response = achievement.pinnedId
-      ? await fetch(`/api/planner/${achievement.pinnedId}`, {
-          method: "DELETE",
-          headers: { [productConfig.csrfHeader]: csrfToken },
-        })
-      : await fetch("/api/planner", {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-            [productConfig.csrfHeader]: csrfToken,
-          },
-          body: JSON.stringify({ achievementId: achievement.id }),
-        });
-    const body = (await response.json()) as ApiResponse;
-    if (!body.ok) {
-      setToast(body.message);
-      return;
+  const groupedItems = useMemo(() => {
+    const groups = new Map<
+      string,
+      { name: string; sort: number; achievements: AchievementView[] }
+    >();
+    for (const achievement of visibleItems) {
+      const name = achievement.achievementGroupName ?? "Base Game";
+      const current = groups.get(name) ?? {
+        name,
+        sort: achievement.achievementGroupSort,
+        achievements: [],
+      };
+      current.achievements.push(achievement);
+      groups.set(name, current);
     }
-
-    setItems((current) =>
-      current.map((item) =>
-        item.id === achievement.id
-          ? {
-              ...item,
-              pinnedId: achievement.pinnedId ? undefined : body.item?.id,
-            }
-          : item,
-      ),
+    return Array.from(groups.values()).sort(
+      (a, b) => a.sort - b.sort || a.name.localeCompare(b.name),
     );
-    setToast(
-      achievement.pinnedId ? "Removed from planner." : "Pinned to planner.",
-    );
-  }
+  }, [visibleItems]);
 
   function guideUrl(site: "google" | "youtube", achievement: AchievementView) {
     const query = encodeURIComponent(
@@ -131,6 +113,7 @@ export function AchievementListClient({
           <option value="all">All states</option>
           <option value="locked">Locked</option>
           <option value="unlocked">Unlocked</option>
+          <option value="unobtainable">Unobtainable</option>
         </Select>
         <Select
           aria-label="Filter rarity"
@@ -169,155 +152,159 @@ export function AchievementListClient({
         </Button>
       </div>
 
-      {toast ? (
-        <div
-          role="status"
-          className="rounded-md border border-cyan-300/40 bg-cyan-300/10 p-3 text-sm text-cyan-100"
-        >
-          {toast}
-        </div>
-      ) : null}
-
       {visibleItems.length ? (
         <div className="grid gap-3" data-testid="achievement-results">
-          {visibleItems.map((achievement) => {
-            const concealed =
-              achievement.hidden &&
-              !achievement.unlocked &&
-              !showHidden &&
-              !revealedHidden.has(achievement.id);
-            if (concealed) {
-              return (
-                <Card
-                  key={achievement.id}
-                  className="[content-visibility:auto] [contain-intrinsic-size:96px_120px]"
-                >
-                  <button
-                    type="button"
-                    className="grid w-full gap-4 p-4 text-left sm:grid-cols-[72px_1fr] sm:items-center"
-                    onClick={() =>
-                      setRevealedHidden((current) =>
-                        new Set(current).add(achievement.id),
-                      )
-                    }
-                  >
-                    <span className="grid h-16 w-16 place-items-center rounded-md border border-slate-700 bg-slate-900 text-slate-400">
-                      <Eye className="h-6 w-6" aria-hidden="true" />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block font-semibold text-white">
-                        Hidden achievement
-                      </span>
-                      <span className="mt-2 block text-sm leading-6 text-slate-400">
-                        Click to reveal hidden achievement.
-                      </span>
-                    </span>
-                  </button>
-                </Card>
-              );
-            }
-            return (
-              <Card
-                key={achievement.id}
-                className="[content-visibility:auto] [contain-intrinsic-size:96px_120px]"
-              >
-                <CardContent className="grid gap-4 p-4 sm:grid-cols-[72px_1fr_auto] sm:items-center">
-                  <Image
-                    src={
-                      achievement.unlocked
-                        ? (achievement.unlockedIconUrl ??
-                          achievement.lockedIconUrl ??
-                          "/ac-placeholder.svg")
-                        : (achievement.lockedIconUrl ??
-                          achievement.unlockedIconUrl ??
-                          "/ac-placeholder.svg")
-                    }
-                    alt=""
-                    width={64}
-                    height={64}
-                    className={cn(
-                      "h-16 w-16 rounded-md object-cover",
-                      !achievement.unlocked && "grayscale",
-                    )}
-                  />
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="font-semibold text-white">
-                        {achievement.displayName}
-                      </h2>
-                      <Badge
-                        className={cn(
-                          achievement.rarity === "ultra-rare" &&
-                            "border-rose-300/60 text-rose-200",
-                          achievement.rarity === "rare" &&
-                            "border-amber-300/60 text-amber-200",
-                          achievement.rarity === "uncommon" &&
-                            "border-lime-300/60 text-lime-200",
-                        )}
+          {groupedItems.map((group) => (
+            <section key={group.name} className="grid gap-3">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+                  {group.name}
+                </h2>
+                <span className="text-xs text-slate-500">
+                  {group.achievements.length} achievement
+                  {group.achievements.length === 1 ? "" : "s"}
+                </span>
+              </div>
+              {group.achievements.map((achievement) => {
+                const concealed =
+                  achievement.hidden &&
+                  !achievement.unlocked &&
+                  !showHidden &&
+                  !revealedHidden.has(achievement.id);
+                if (concealed) {
+                  return (
+                    <Card
+                      key={achievement.id}
+                      className="[content-visibility:auto] [contain-intrinsic-size:96px_120px]"
+                    >
+                      <button
+                        type="button"
+                        className="grid w-full gap-4 p-4 text-left sm:grid-cols-[72px_1fr] sm:items-center"
+                        onClick={() =>
+                          setRevealedHidden((current) =>
+                            new Set(current).add(achievement.id),
+                          )
+                        }
                       >
-                        {rarityLabel(achievement.rarity)}
-                      </Badge>
-                      <Badge>
-                        {achievement.unlocked ? "Unlocked" : "Locked"}
-                      </Badge>
-                    </div>
-                    <p className="mt-2 text-sm leading-6 text-slate-400">
-                      {achievement.description ??
-                        "No description provided by Steam."}
-                    </p>
-                    <p className="mt-2 text-xs text-slate-500">
-                      {achievement.globalCompletionPercentage ?? "Unknown"}%
-                      global
-                      {achievement.unlockedAt
-                        ? ` - Unlocked ${formatDate(achievement.unlockedAt)}`
-                        : ""}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                    <a
-                      href={guideUrl("google", achievement)}
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-label={`Search Google for ${achievement.displayName} guide`}
-                      className={buttonClassName({
-                        variant: "secondary",
-                        size: "icon",
-                      })}
-                    >
-                      <span aria-hidden="true">G</span>
-                    </a>
-                    <a
-                      href={guideUrl("youtube", achievement)}
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-label={`Search YouTube for ${achievement.displayName} guide`}
-                      className={buttonClassName({
-                        variant: "secondary",
-                        size: "icon",
-                      })}
-                    >
-                      <YoutubeGuideIcon />
-                    </a>
-                    <Button
-                      type="button"
-                      variant={achievement.pinnedId ? "secondary" : "default"}
-                      disabled={isPending}
-                      onClick={() =>
-                        startTransition(() => togglePin(achievement))
-                      }
-                    >
-                      {achievement.pinnedId ? (
-                        <PinOff className="h-4 w-4" aria-hidden="true" />
-                      ) : (
-                        <Pin className="h-4 w-4" aria-hidden="true" />
-                      )}
-                      {achievement.pinnedId ? "Unpin" : "Pin"}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                        <span className="grid h-16 w-16 place-items-center rounded-md border border-slate-700 bg-slate-900 text-slate-400">
+                          <Eye className="h-6 w-6" aria-hidden="true" />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block font-semibold text-white">
+                            Hidden achievement
+                          </span>
+                          <span className="mt-2 block text-sm leading-6 text-slate-400">
+                            Click to reveal hidden achievement.
+                          </span>
+                        </span>
+                      </button>
+                    </Card>
+                  );
+                }
+                const obtainability = obtainabilityLabel(
+                  achievement.obtainability,
+                );
+                return (
+                  <Card
+                    key={achievement.id}
+                    className="[content-visibility:auto] [contain-intrinsic-size:96px_120px]"
+                  >
+                    <CardContent className="grid gap-4 p-4 sm:grid-cols-[72px_1fr_auto] sm:items-center">
+                      <Image
+                        src={
+                          achievement.unlocked
+                            ? (achievement.unlockedIconUrl ??
+                              achievement.lockedIconUrl ??
+                              "/ac-placeholder.svg")
+                            : (achievement.lockedIconUrl ??
+                              achievement.unlockedIconUrl ??
+                              "/ac-placeholder.svg")
+                        }
+                        alt=""
+                        width={64}
+                        height={64}
+                        className={cn(
+                          "h-16 w-16 rounded-md object-cover",
+                          !achievement.unlocked && "grayscale",
+                        )}
+                      />
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h2 className="font-semibold text-white">
+                            {achievement.displayName}
+                          </h2>
+                          <Badge
+                            className={cn(
+                              achievement.rarity === "ultra-rare" &&
+                                "border-rose-300/60 text-rose-200",
+                              achievement.rarity === "rare" &&
+                                "border-amber-300/60 text-amber-200",
+                              achievement.rarity === "uncommon" &&
+                                "border-lime-300/60 text-lime-200",
+                            )}
+                          >
+                            {rarityLabel(achievement.rarity)}
+                          </Badge>
+                          <Badge>
+                            {achievement.unlocked ? "Unlocked" : "Locked"}
+                          </Badge>
+                          {obtainability ? (
+                            <Badge
+                              className={cn(
+                                achievement.obtainability === 3 &&
+                                  "border-red-300/60 text-red-200",
+                                achievement.obtainability === 2 &&
+                                  "border-amber-300/60 text-amber-200",
+                              )}
+                            >
+                              {obtainability}
+                            </Badge>
+                          ) : null}
+                        </div>
+                        <p className="mt-2 text-sm leading-6 text-slate-400">
+                          {achievement.description ??
+                            "No description provided by Steam."}
+                        </p>
+                        <p className="mt-2 text-xs text-slate-500">
+                          {achievement.globalCompletionPercentage ?? "Unknown"}%
+                          global
+                          {achievement.unlockedAt
+                            ? ` - Unlocked ${formatDate(achievement.unlockedAt)}`
+                            : ""}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                        <a
+                          href={guideUrl("google", achievement)}
+                          target="_blank"
+                          rel="noreferrer"
+                          aria-label={`Search Google for ${achievement.displayName} guide`}
+                          className={buttonClassName({
+                            variant: "secondary",
+                            size: "icon",
+                          })}
+                        >
+                          <span aria-hidden="true">G</span>
+                        </a>
+                        <a
+                          href={guideUrl("youtube", achievement)}
+                          target="_blank"
+                          rel="noreferrer"
+                          aria-label={`Search YouTube for ${achievement.displayName} guide`}
+                          className={buttonClassName({
+                            variant: "secondary",
+                            size: "icon",
+                          })}
+                        >
+                          <YoutubeGuideIcon />
+                        </a>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </section>
+          ))}
         </div>
       ) : (
         <EmptyState title="No achievements match">

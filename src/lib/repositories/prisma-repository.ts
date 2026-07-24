@@ -3,7 +3,11 @@ import { defaultPreferences } from "@/config/default-preferences";
 import { AppError } from "@/lib/errors";
 import { classifyRarity, completionPercentage } from "@/lib/calculations";
 import { prisma } from "@/lib/repositories/prisma";
-import { hasPotentialAchievementStats } from "@/lib/steam/filters";
+import {
+  getAchievementGroups,
+  getSteamHuntersAppMeta,
+  getSteamHuntersAchievementMeta,
+} from "@/lib/steam/achievement-groups";
 import { themePreferences } from "@/lib/types";
 import type {
   AppRepository,
@@ -35,8 +39,15 @@ type UserGameRow = {
     id: string;
     steamAppId: number;
     name: string;
+    genres?: string[];
+    developers?: string[];
+    publishers?: string[];
     capsuleImageUrl: string | null;
     headerImageUrl: string | null;
+    hasPaidDlc: boolean;
+    fastestCompletionTime: number | null;
+    medianCompletionTime: number | null;
+    _count?: { achievements: number };
   };
 };
 
@@ -50,6 +61,10 @@ type AchievementRow = {
   lockedIconUrl: string | null;
   unlockedIconUrl: string | null;
   globalCompletionPercentage: number | null;
+  achievementGroupName: string | null;
+  achievementGroupSort: number;
+  achievementGroupSteamAppId: number | null;
+  obtainability: number;
   game: {
     steamAppId: number;
   };
@@ -108,13 +123,21 @@ function gameSummary(row: UserGameRow): GameSummary {
     id: row.game.id,
     appId: row.game.steamAppId,
     name: row.game.name,
-    capsuleImageUrl: row.customBoxArtUrl ?? row.game.capsuleImageUrl ?? undefined,
+    genres: row.game.genres ?? [],
+    developers: row.game.developers ?? [],
+    publishers: row.game.publishers ?? [],
+    capsuleImageUrl:
+      row.customBoxArtUrl ?? row.game.capsuleImageUrl ?? undefined,
     headerImageUrl: row.customBannerUrl ?? row.game.headerImageUrl ?? undefined,
     playtimeMinutes: row.playtimeMinutes ?? undefined,
     unlockedAchievementCount: row.unlockedAchievementCount,
     totalAchievementCount: row.totalAchievementCount,
+    unobtainableAchievementCount: row.game._count?.achievements ?? 0,
     completionPercentage: row.completionPercentage,
     perfected: row.perfected,
+    hasPaidDlc: row.game.hasPaidDlc,
+    fastestCompletionTime: row.game.fastestCompletionTime ?? undefined,
+    medianCompletionTime: row.game.medianCompletionTime ?? undefined,
     lastPlayedAt: row.lastPlayedAt?.toISOString(),
     lastSyncedAt: row.lastSyncedAt?.toISOString(),
     hasAchievementData: row.totalAchievementCount > 0,
@@ -144,6 +167,10 @@ function achievementView(
     lockedIconUrl: imageUrl(row.lockedIconUrl),
     unlockedIconUrl: imageUrl(row.unlockedIconUrl),
     globalCompletionPercentage: row.globalCompletionPercentage ?? undefined,
+    achievementGroupName: row.achievementGroupName ?? undefined,
+    achievementGroupSort: row.achievementGroupSort,
+    achievementGroupSteamAppId: row.achievementGroupSteamAppId ?? undefined,
+    obtainability: row.obtainability,
     rarity: classifyRarity(
       row.globalCompletionPercentage ?? undefined,
       thresholds,
@@ -228,7 +255,15 @@ export const prismaRepository: AppRepository = {
   async getGames(userId) {
     const rows = await prisma.userGame.findMany({
       where: { userId, hidden: false },
-      include: { game: true },
+      include: {
+        game: {
+          include: {
+            _count: {
+              select: { achievements: { where: { obtainability: 3 } } },
+            },
+          },
+        },
+      },
       orderBy: [{ completionPercentage: "desc" }, { updatedAt: "desc" }],
     });
     return rows.map(gameSummary);
@@ -287,6 +322,9 @@ export const prismaRepository: AppRepository = {
       include: {
         game: {
           include: {
+            _count: {
+              select: { achievements: { where: { obtainability: 3 } } },
+            },
             achievements: {
               include: {
                 game: { select: { steamAppId: true } },
@@ -330,7 +368,15 @@ export const prismaRepository: AppRepository = {
     const updated = await prisma.userGame.update({
       where: { id: userGame.id },
       data: { customBoxArtUrl: imageUrl },
-      include: { game: true },
+      include: {
+        game: {
+          include: {
+            _count: {
+              select: { achievements: { where: { obtainability: 3 } } },
+            },
+          },
+        },
+      },
     });
     return gameSummary(updated);
   },
@@ -345,7 +391,15 @@ export const prismaRepository: AppRepository = {
     const updated = await prisma.userGame.update({
       where: { id: userGame.id },
       data: { customBannerUrl: imageUrl },
-      include: { game: true },
+      include: {
+        game: {
+          include: {
+            _count: {
+              select: { achievements: { where: { obtainability: 3 } } },
+            },
+          },
+        },
+      },
     });
     return gameSummary(updated);
   },
@@ -395,8 +449,7 @@ export const prismaRepository: AppRepository = {
         new Date(game.lastSyncedAt) >= lastMonth,
     ).length;
     const monthGamesWithAchievements = gamesWithAchievements.filter(
-      (game) =>
-        game.lastSyncedAt && new Date(game.lastSyncedAt) >= lastMonth,
+      (game) => game.lastSyncedAt && new Date(game.lastSyncedAt) >= lastMonth,
     ).length;
     const monthCompletion = completionPercentage(
       totalUnlocked - monthUnlocked,
@@ -462,11 +515,10 @@ export const prismaRepository: AppRepository = {
         perfected: monthPerfected,
         gamesWithAchievements: monthGamesWithAchievements,
         recentUnlocks: monthUnlocked,
-        completionPercentage:
-          dashboardCompletionDelta(
-            completionPercentage(totalUnlocked, totalAchievements),
-            monthCompletion,
-          ),
+        completionPercentage: dashboardCompletionDelta(
+          completionPercentage(totalUnlocked, totalAchievements),
+          monthCompletion,
+        ),
       },
       closestGames: gamesWithAchievements
         .filter((game) => !game.perfected)
@@ -506,23 +558,25 @@ export const prismaRepository: AppRepository = {
     return pins.flatMap((pin) => {
       const userGame = pin.achievement.game.userGames[0];
       if (!userGame) return [];
-      return [{
-        id: pin.id,
-        achievement: achievementView(
-          {
-            ...pin.achievement,
-            game: { steamAppId: pin.achievement.game.steamAppId },
-          },
-          prefs.rarityThresholds,
-        ),
-        game: gameSummary({ ...userGame, game: pin.achievement.game }),
-        notes: pin.notes,
-        manualProgressText: pin.manualProgressText,
-        priority: pin.priority.toLowerCase() as PlannerItem["priority"],
-        state: pin.state.toLowerCase() as PlannerItem["state"],
-        position: pin.position,
-        createdAt: pin.createdAt.toISOString(),
-      }];
+      return [
+        {
+          id: pin.id,
+          achievement: achievementView(
+            {
+              ...pin.achievement,
+              game: { steamAppId: pin.achievement.game.steamAppId },
+            },
+            prefs.rarityThresholds,
+          ),
+          game: gameSummary({ ...userGame, game: pin.achievement.game }),
+          notes: pin.notes,
+          manualProgressText: pin.manualProgressText,
+          priority: pin.priority.toLowerCase() as PlannerItem["priority"],
+          state: pin.state.toLowerCase() as PlannerItem["state"],
+          position: pin.position,
+          createdAt: pin.createdAt.toISOString(),
+        },
+      ];
     });
   },
 
@@ -758,25 +812,38 @@ export const prismaRepository: AppRepository = {
       let achievementsUpdated = 0;
       let gamesUpdated = 0;
       let processedGames = 0;
-      const candidateGames = owned.games.filter(hasPotentialAchievementStats);
+      const candidateGames = owned.games;
       onProgress?.({ currentGames: 0, totalGames: candidateGames.length });
       await bounded(
         candidateGames,
         productConfig.sync.concurrency,
         async (ownedGame) => {
           try {
+            const steamHuntersApp = await getSteamHuntersAppMeta(
+              ownedGame.appId,
+            );
+            const steamHuntersGameData = steamHuntersApp
+              ? {
+                  hasPaidDlc: steamHuntersApp.hasPaidDlc,
+                  fastestCompletionTime: steamHuntersApp.fastestCompletionTime,
+                  medianCompletionTime: steamHuntersApp.medianCompletionTime,
+                  steamHuntersSyncedAt: new Date(),
+                }
+              : {};
             const game = await prisma.game.upsert({
               where: { steamAppId: ownedGame.appId },
               update: {
                 name: ownedGame.name ?? `App ${ownedGame.appId}`,
                 capsuleImageUrl: capsule(ownedGame.appId),
                 headerImageUrl: header(ownedGame.appId),
+                ...steamHuntersGameData,
               },
               create: {
                 steamAppId: ownedGame.appId,
                 name: ownedGame.name ?? `App ${ownedGame.appId}`,
                 capsuleImageUrl: capsule(ownedGame.appId),
                 headerImageUrl: header(ownedGame.appId),
+                ...steamHuntersGameData,
               },
             });
 
@@ -784,8 +851,17 @@ export const prismaRepository: AppRepository = {
             if (!schema.achievements.length) return;
 
             const [playerAchievements, globalPercentages] = await Promise.all([
-              adapter.getPlayerAchievements(user.steamId, ownedGame.appId),
+              adapter
+                .getPlayerAchievements(user.steamId, ownedGame.appId)
+                .catch((error) => {
+                  if (isSkippableSteamGameError(error)) return [];
+                  throw error;
+                }),
               adapter.getGlobalAchievementPercentages(ownedGame.appId),
+            ]);
+            const [achievementGroups, achievementMeta] = await Promise.all([
+              getAchievementGroups(ownedGame.appId),
+              getSteamHuntersAchievementMeta(ownedGame.appId),
             ]);
             const progressByName = new Map(
               playerAchievements.map((item) => [item.apiName, item]),
@@ -798,6 +874,22 @@ export const prismaRepository: AppRepository = {
             for (const item of schema.achievements) {
               const progress = progressByName.get(item.apiName);
               if (progress?.unlocked) unlocked += 1;
+              const group = achievementGroups?.get(item.apiName);
+              const meta = achievementMeta?.get(item.apiName);
+              const groupData = achievementGroups
+                ? {
+                    achievementGroupName: group?.name,
+                    achievementGroupSort: group?.sort ?? 0,
+                    achievementGroupSteamAppId: group?.steamAppId,
+                    achievementGroupLastSyncedAt: new Date(),
+                  }
+                : {};
+              const metaData = achievementMeta
+                ? {
+                    obtainability: meta?.obtainability ?? 0,
+                    obtainabilityLastSyncedAt: new Date(),
+                  }
+                : {};
               const achievement = await prisma.achievement.upsert({
                 where: {
                   gameId_apiName: { gameId: game.id, apiName: item.apiName },
@@ -810,6 +902,8 @@ export const prismaRepository: AppRepository = {
                   unlockedIconUrl: item.unlockedIconUrl,
                   globalCompletionPercentage: rarityByName.get(item.apiName),
                   globalCompletionLastSyncedAt: new Date(),
+                  ...groupData,
+                  ...metaData,
                 },
                 create: {
                   gameId: game.id,
@@ -821,6 +915,16 @@ export const prismaRepository: AppRepository = {
                   unlockedIconUrl: item.unlockedIconUrl,
                   globalCompletionPercentage: rarityByName.get(item.apiName),
                   globalCompletionLastSyncedAt: new Date(),
+                  achievementGroupName: group?.name,
+                  achievementGroupSort: group?.sort ?? 0,
+                  achievementGroupSteamAppId: group?.steamAppId,
+                  achievementGroupLastSyncedAt: achievementGroups
+                    ? new Date()
+                    : undefined,
+                  obtainability: meta?.obtainability ?? 0,
+                  obtainabilityLastSyncedAt: achievementMeta
+                    ? new Date()
+                    : undefined,
                 },
               });
 

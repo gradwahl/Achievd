@@ -20,9 +20,27 @@ describe("GameLibraryClient", () => {
     expect(screen.queryByText("Celeste")).not.toBeInTheDocument();
 
     await user.clear(screen.getByLabelText(/search games/i));
-    await user.selectOptions(screen.getByLabelText(/filter games/i), "incomplete");
+    await user.selectOptions(
+      screen.getByLabelText(/filter games/i),
+      "incomplete",
+    );
     const results = within(screen.getByTestId("game-results"));
     expect(results.getByText("Portal 2")).toBeInTheDocument();
     expect(results.queryByText("Townscaper")).not.toBeInTheDocument();
+  });
+
+  it("shows unobtainable achievement count on game cards", () => {
+    render(
+      <GameLibraryClient
+        games={testGames}
+        defaultSort="completion"
+        csrfToken="test-csrf"
+      />,
+    );
+
+    expect(screen.getByLabelText("1 Unobtainable")).toHaveAttribute(
+      "title",
+      "1 Unobtainable",
+    );
   });
 });

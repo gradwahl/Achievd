@@ -1,0 +1,4 @@
+ALTER TABLE "Game" ADD COLUMN "hasPaidDlc" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Game" ADD COLUMN "fastestCompletionTime" INTEGER;
+ALTER TABLE "Game" ADD COLUMN "medianCompletionTime" INTEGER;
+ALTER TABLE "Game" ADD COLUMN "steamHuntersSyncedAt" TIMESTAMP(3);

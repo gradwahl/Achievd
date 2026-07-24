@@ -70,39 +70,46 @@ model SteamProfile {
 }
 
 model Game {
-  id                      String        @id @default(cuid())
-  steamAppId              Int           @unique
-  name                    String
-  capsuleImageUrl         String?
-  headerImageUrl          String?
-  totalKnownAchievements  Int           @default(0)
-  lastSchemaSyncedAt      DateTime?
-  createdAt               DateTime      @default(now())
-  updatedAt               DateTime      @updatedAt
-  achievements            Achievement[]
-  userGames               UserGame[]
+  id                     String        @id @default(cuid())
+  steamAppId             Int           @unique
+  name                   String
+  genres                 String[]      @default([])
+  developers             String[]      @default([])
+  publishers             String[]      @default([])
+  capsuleImageUrl        String?
+  headerImageUrl         String?
+  totalKnownAchievements Int           @default(0)
+  lastSchemaSyncedAt     DateTime?
+  hasPaidDlc             Boolean       @default(false)
+  fastestCompletionTime  Int?
+  medianCompletionTime   Int?
+  steamHuntersSyncedAt   DateTime?
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+  achievements           Achievement[]
+  userGames              UserGame[]
 
   @@index([name])
 }
 
 model UserGame {
-  id                         String    @id @default(cuid())
-  userId                     String
-  gameId                     String
-  playtimeMinutes            Int?
-  unlockedAchievementCount   Int       @default(0)
-  totalAchievementCount      Int       @default(0)
-  completionPercentage       Float     @default(0)
-  perfected                  Boolean   @default(false)
-  hidden                     Boolean   @default(false)
-  customBoxArtUrl            String?
-  customBannerUrl            String?
-  lastPlayedAt               DateTime?
-  lastSyncedAt               DateTime?
-  createdAt                  DateTime  @default(now())
-  updatedAt                  DateTime  @updatedAt
-  user                       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  game                       Game      @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  id                       String    @id @default(cuid())
+  userId                   String
+  gameId                   String
+  playtimeMinutes          Int?
+  unlockedAchievementCount Int       @default(0)
+  totalAchievementCount    Int       @default(0)
+  completionPercentage     Float     @default(0)
+  perfected                Boolean   @default(false)
+  hidden                   Boolean   @default(false)
+  customBoxArtUrl          String?
+  customBannerUrl          String?
+  lastPlayedAt             DateTime?
+  lastSyncedAt             DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+  user                     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game                     Game      @relation(fields: [gameId], references: [id], onDelete: Cascade)
 
   @@unique([userId, gameId])
   @@index([userId, hidden, completionPercentage])
@@ -113,37 +120,45 @@ model UserGame {
 }
 
 model Achievement {
-  id                                String              @id @default(cuid())
-  gameId                            String
-  apiName                           String
-  displayName                       String
-  description                       String?
-  hidden                            Boolean             @default(false)
-  lockedIconUrl                     String?
-  unlockedIconUrl                   String?
-  globalCompletionPercentage        Float?
-  globalCompletionLastSyncedAt      DateTime?
-  createdAt                         DateTime            @default(now())
-  updatedAt                         DateTime            @updatedAt
-  game                              Game                @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  userAchievements                  UserAchievement[]
-  pinnedAchievements                PinnedAchievement[]
+  id                           String              @id @default(cuid())
+  gameId                       String
+  apiName                      String
+  displayName                  String
+  description                  String?
+  hidden                       Boolean             @default(false)
+  lockedIconUrl                String?
+  unlockedIconUrl              String?
+  globalCompletionPercentage   Float?
+  globalCompletionLastSyncedAt DateTime?
+  achievementGroupName         String?
+  achievementGroupSort         Int                 @default(0)
+  achievementGroupSteamAppId   Int?
+  achievementGroupLastSyncedAt DateTime?
+  obtainability                Int                 @default(0)
+  obtainabilityLastSyncedAt    DateTime?
+  createdAt                    DateTime            @default(now())
+  updatedAt                    DateTime            @updatedAt
+  game                         Game                @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  userAchievements             UserAchievement[]
+  pinnedAchievements           PinnedAchievement[]
 
   @@unique([gameId, apiName])
   @@index([gameId, hidden])
+  @@index([gameId, achievementGroupSort])
+  @@index([gameId, obtainability])
   @@index([globalCompletionPercentage])
 }
 
 model UserAchievement {
-  id                String      @id @default(cuid())
-  userId            String
-  achievementId     String
-  unlocked          Boolean     @default(false)
-  unlockedAt        DateTime?
-  firstObservedAt   DateTime    @default(now())
-  lastObservedAt    DateTime    @default(now())
-  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  achievement       Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  id              String      @id @default(cuid())
+  userId          String
+  achievementId   String
+  unlocked        Boolean     @default(false)
+  unlockedAt      DateTime?
+  firstObservedAt DateTime    @default(now())
+  lastObservedAt  DateTime    @default(now())
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement     Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
 
   @@unique([userId, achievementId])
   @@index([userId, unlocked])

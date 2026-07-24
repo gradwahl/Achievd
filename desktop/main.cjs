@@ -4,6 +4,7 @@ const fs = require("node:fs");
 const http = require("node:http");
 const net = require("node:net");
 const path = require("node:path");
+const { randomBytes } = require("node:crypto");
 
 let nextProcess;
 let logFile;
@@ -166,6 +167,19 @@ function waitFor(url, timeoutMs = 60000, onProgress = () => {}) {
   });
 }
 
+function getSessionSecret() {
+  if (process.env.SESSION_SECRET) return process.env.SESSION_SECRET;
+
+  const secretPath = path.join(app.getPath("userData"), "session-secret");
+  try {
+    return fs.readFileSync(secretPath, "utf8").trim();
+  } catch {}
+
+  const secret = randomBytes(32).toString("base64url");
+  fs.writeFileSync(secretPath, secret, { mode: 0o600 });
+  return secret;
+}
+
 async function startNextServer(onProgress = () => {}) {
   if (!app.isPackaged) {
     onProgress(100, "Opening the interface...");
@@ -199,9 +213,9 @@ async function startNextServer(onProgress = () => {}) {
       HOSTNAME: "127.0.0.1",
       APP_URL: appUrl,
       ACHIEVEMENT_COMPASS_DATA_DIR: app.getPath("userData"),
+      NODE_OPTIONS: process.env.NODE_OPTIONS || "--max-old-space-size=1024",
       DEMO_MODE: process.env.DEMO_MODE || "true",
-      SESSION_SECRET:
-        process.env.SESSION_SECRET || "achievd-desktop-demo-secret-value",
+      SESSION_SECRET: getSessionSecret(),
     },
     stdio: ["ignore", output, output],
     windowsHide: true,
@@ -283,14 +297,28 @@ function createTray() {
 }
 
 function attachNavigationGuards(window, appUrl) {
+  function isAppUrl(url) {
+    try {
+      const next = new URL(url);
+      const app = new URL(appUrl);
+      return (
+        next.protocol === app.protocol &&
+        next.port === app.port &&
+        ["127.0.0.1", "localhost", "::1"].includes(next.hostname)
+      );
+    } catch {
+      return false;
+    }
+  }
+
   window.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith(appUrl)) return { action: "allow" };
+    if (isAppUrl(url)) return { action: "allow" };
     shell.openExternal(url);
     return { action: "deny" };
   });
 
   window.webContents.on("will-navigate", (event, url) => {
-    if (url.startsWith(appUrl)) return;
+    if (isAppUrl(url)) return;
     event.preventDefault();
     shell.openExternal(url);
   });

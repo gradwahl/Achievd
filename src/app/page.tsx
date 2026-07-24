@@ -57,31 +57,44 @@ export default async function Home({
             {profiles.length ? (
               <div className="mt-8 grid gap-3">
                 {profiles.map((profile) => (
-                  <Link
+                  <form
                     key={profile.username}
-                    href={
-                      profile.autoLogin
-                        ? `/local-login?username=${encodeURIComponent(profile.username)}&returnTo=${encodeURIComponent(returnTo)}`
-                        : `/?mode=login&profile=${encodeURIComponent(profile.username)}&returnTo=${encodeURIComponent(returnTo)}`
-                    }
-                    className="flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-900 p-3 text-left hover:border-cyan-300/60"
+                    action={profile.autoLogin ? "/local-login" : "/"}
+                    method="get"
                   >
-                    <Image
-                      src={profile.avatarFullUrl ?? "/app-logo.png"}
-                      alt=""
-                      width={44}
-                      height={44}
-                      className="h-11 w-11 rounded-md object-cover"
-                    />
-                    <span>
-                      <span className="block font-semibold text-white">
-                        {profile.displayName}
+                    <input type="hidden" name="username" value={profile.username} />
+                    <input type="hidden" name="returnTo" value={returnTo} />
+                    {!profile.autoLogin ? (
+                      <>
+                        <input type="hidden" name="mode" value="login" />
+                        <input
+                          type="hidden"
+                          name="profile"
+                          value={profile.username}
+                        />
+                      </>
+                    ) : null}
+                    <button
+                      type="submit"
+                      className="flex w-full items-center gap-3 rounded-lg border border-slate-800 bg-slate-900 p-3 text-left hover:border-cyan-300/60"
+                    >
+                      <Image
+                        src={profile.avatarFullUrl ?? "/app-logo.png"}
+                        alt=""
+                        width={44}
+                        height={44}
+                        className="h-11 w-11 rounded-md object-cover"
+                      />
+                      <span>
+                        <span className="block font-semibold text-white">
+                          {profile.displayName}
+                        </span>
+                        <span className="block text-xs text-slate-400">
+                          {profile.username}
+                        </span>
                       </span>
-                      <span className="block text-xs text-slate-400">
-                        {profile.username}
-                      </span>
-                    </span>
-                  </Link>
+                    </button>
+                  </form>
                 ))}
               </div>
             ) : null}

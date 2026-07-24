@@ -49,6 +49,12 @@ export type SteamGameSchema = {
   achievements: SteamSchemaAchievement[];
 };
 
+export type SteamStoreDetails = {
+  genres: string[];
+  developers: string[];
+  publishers: string[];
+};
+
 export type SteamAdapter = {
   getProfile(steamId: string): Promise<SteamProfile>;
   getOwnedGames(steamId: string): Promise<ParsedOwnedGames>;
@@ -57,6 +63,7 @@ export type SteamAdapter = {
     appId: number,
   ): Promise<SteamPlayerAchievement[]>;
   getAchievementSchema(appId: number): Promise<SteamGameSchema>;
+  getStoreDetails(appId: number): Promise<SteamStoreDetails>;
   getGlobalAchievementPercentages(
     appId: number,
   ): Promise<SteamGlobalAchievement[]>;

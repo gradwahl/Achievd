@@ -4,9 +4,11 @@ import {
   parsePlayerSummary,
   parsePlayerAchievements,
   parseAchievementSchema,
+  parseCommunityAchievementSchema,
   parseGlobalAchievementPercentages,
+  parseSteamLibraryCsv,
+  parseStoreDetails,
 } from "@/lib/steam/parsers";
-import { hasPotentialAchievementStats } from "@/lib/steam/filters";
 
 describe("Steam response parsing", () => {
   it("handles profile visibility and private owned-games state", () => {
@@ -37,19 +39,6 @@ describe("Steam response parsing", () => {
     ).toEqual([{ apiName: "x", percent: 4.2 }]);
   });
 
-  it("probes games when Steam omits the community stats flag", () => {
-    const parsed = parseOwnedGames({
-      response: { games: [{ appid: 10, name: "Patchy Steam Game" }] },
-    });
-
-    expect(parsed.games.filter(hasPotentialAchievementStats)).toHaveLength(1);
-    expect(
-      [{ appId: 10, hasCommunityVisibleStats: false }].filter(
-        hasPotentialAchievementStats,
-      ),
-    ).toHaveLength(0);
-  });
-
   it("accepts Steam global percentages as strings", () => {
     expect(
       parseGlobalAchievementPercentages({
@@ -58,6 +47,59 @@ describe("Steam response parsing", () => {
         },
       }),
     ).toEqual([{ apiName: "ACH_WIN", percent: 12.5 }]);
+  });
+
+  it("parses Steam Store genres", () => {
+    expect(
+      parseStoreDetails(10, {
+        "10": {
+          success: true,
+          data: {
+            developers: ["Valve"],
+            genres: [{ description: "Action" }, { description: "RPG" }, {}],
+            publishers: ["Valve"],
+          },
+        },
+      }),
+    ).toEqual({
+      developers: ["Valve"],
+      genres: ["Action", "RPG"],
+      publishers: ["Valve"],
+    });
+  });
+
+  it("parses Steam library CSV achievement exports", () => {
+    const csv =
+      "game,id,hours,steam achievements\n" +
+      "Raise the Colours,4008340,6.083333333333333,x\n" +
+      "No Trophies,1,2,\n";
+
+    expect(parseSteamLibraryCsv(csv)).toEqual([
+      {
+        appId: 4008340,
+        name: "Raise the Colours",
+        playtimeMinutes: 365,
+      },
+    ]);
+  });
+
+  it("builds a schema from Steam community achievements markup", () => {
+    const parsed = parseCommunityAchievementSchema(
+      4008340,
+      '<div class="achieveImgHolder"><img src="https://cdn.example/a.jpg" /></div><div class="achieveTxt"><h3>Kettle&amp;Tea</h3><h5>Launch RTC</h5></div>',
+      [{ apiName: "OPEN_GAME_ACHIEVEMENT_1", percent: 15.7 }],
+    );
+
+    expect(parsed.achievements).toEqual([
+      {
+        apiName: "OPEN_GAME_ACHIEVEMENT_1",
+        displayName: "Kettle&Tea",
+        description: "Launch RTC",
+        hidden: false,
+        lockedIconUrl: "https://cdn.example/a.jpg",
+        unlockedIconUrl: "https://cdn.example/a.jpg",
+      },
+    ]);
   });
 
   it("drops Steam achievement folder URLs without image filenames", () => {

@@ -5,7 +5,13 @@ import path from "node:path";
 export default defineConfig({
   plugins: [react()],
   test: {
-    exclude: ["tests/e2e/**", "node_modules/**", "dist/**", ".next/**"],
+    exclude: [
+      "tests/e2e/**",
+      "node_modules/**",
+      "dist/**",
+      ".next/**",
+      ".postgres/**",
+    ],
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
     globals: true,

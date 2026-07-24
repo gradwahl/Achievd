@@ -54,6 +54,14 @@ const savedLoginSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
+  const fallback = (username?: string) =>
+    NextResponse.redirect(
+      new URL(
+        `/?mode=login${username ? `&profile=${encodeURIComponent(username)}` : ""}&returnTo=${encodeURIComponent(safeReturnTo(request.nextUrl.searchParams.get("returnTo")))}`,
+        request.url,
+      ),
+      303,
+    );
   try {
     assertRateLimit(
       `local-login:${request.headers.get("x-forwarded-for") ?? "local"}`,
@@ -64,17 +72,11 @@ export async function GET(request: NextRequest) {
       Object.fromEntries(request.nextUrl.searchParams),
     );
     if (!parsed.success) {
-      return NextResponse.redirect(
-        new URL("/?error=credentials", request.url),
-        303,
-      );
+      return fallback();
     }
     const account = await loginSavedLocalAccount(parsed.data.username);
     if (!account) {
-      return NextResponse.redirect(
-        new URL("/?error=credentials", request.url),
-        303,
-      );
+      return fallback(parsed.data.username);
     }
     return await createSessionResponse(
       account.steamId,
@@ -88,7 +90,7 @@ export async function GET(request: NextRequest) {
     if (isDatabaseUnavailable(error)) {
       return NextResponse.redirect(new URL("/?error=database", request.url), 303);
     }
-    return errorResponse(error);
+    return fallback(request.nextUrl.searchParams.get("username") ?? undefined);
   }
 }
 

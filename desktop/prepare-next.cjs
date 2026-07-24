@@ -3,7 +3,10 @@ const path = require("node:path");
 
 const root = path.join(__dirname, "..");
 const standalone = path.join(root, ".next", "standalone");
-const staged = path.join(root, ".desktop-build", "next");
+const stagingRoot = path.join(root, ".desktop-build");
+const staged = path.join(stagingRoot, `next-${Date.now()}`);
+const stableStaged = path.join(stagingRoot, "next");
+const currentMarker = path.join(stagingRoot, "current-next.txt");
 const nextPackage = require(
   path.join(root, "node_modules", "next", "package.json"),
 );
@@ -96,11 +99,39 @@ function stagedPackagePath(packageName) {
   return path.join(staged, "node_modules", ...packageName.split("/"));
 }
 
+function findPrismaGeneratedClient() {
+  const pnpmStore = path.join(staged, "node_modules", ".pnpm");
+  const candidates = fs
+    .readdirSync(pnpmStore)
+    .filter((name) => name.startsWith("@prisma+client@"))
+    .map((name) =>
+      path.join(pnpmStore, name, "node_modules", ".prisma", "client"),
+    );
+  const found = candidates.find((candidate) =>
+    fs.existsSync(path.join(candidate, "default.js")),
+  );
+  if (!found) throw new Error("Unable to find generated Prisma client");
+  return found;
+}
+
+function copyPrismaGeneratedClient() {
+  const generatedClient = findPrismaGeneratedClient();
+  const nextNodeModules = path.join(staged, ".next", "node_modules", "@prisma");
+  if (!fs.existsSync(nextNodeModules)) return;
+  for (const entry of fs.readdirSync(nextNodeModules)) {
+    if (!entry.startsWith("client-")) continue;
+    copyMaterialized(
+      generatedClient,
+      path.join(nextNodeModules, entry, ".prisma", "client"),
+    );
+  }
+}
+
 try {
   console.log(
     `copy ${path.relative(root, standalone)} -> ${path.relative(root, staged)}`,
   );
-  fs.rmSync(staged, { recursive: true, force: true });
+  fs.mkdirSync(stagingRoot, { recursive: true });
   copyMaterialized(standalone, staged);
   for (const packageName of forcedPackages) {
     try {
@@ -121,6 +152,18 @@ try {
     path.join(staged, ".next", "static"),
   );
   copy(path.join(root, "public"), path.join(staged, "public"));
+  copyPrismaGeneratedClient();
+  fs.writeFileSync(currentMarker, staged);
+  try {
+    fs.rmSync(stableStaged, { recursive: true, force: true });
+    fs.cpSync(staged, stableStaged, { recursive: true });
+  } catch (error) {
+    console.warn(
+      `skip ${path.relative(root, stableStaged)} refresh: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
 } catch (error) {
   console.error(error);
   process.exitCode = 1;
